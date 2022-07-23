@@ -25,9 +25,8 @@ const client = createClient({
   url:APIURL
 })
 
-// addresses on aws
-const molochAddress = "0x3155755b79aa083bd953911c92705b7aa82a18f9";
-const tokenAddress = "0x3347b4d90ebe72befb30444c9966b2b990ae9fcb";
+const molochAddress = "0xe15F67230A990c4F1eAac4022783a4ECE32b696D";
+const tokenAddress = "0x6C270398f2030DcB5a767acC9F0564f238419eB8";
 
 async function createProposal(details){
   const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -43,7 +42,7 @@ async function createProposal(details){
   //uint256 paymentRequested,
   //address paymentToken,
   //string memory details
-  await moloch.submitProposal(address,0,0,1,tokenAddress,0,tokenAddress,details)
+  await moloch.connect(signer).submitProposal(address,0,0,1,tokenAddress,0,tokenAddress,details)
   console.log("proposal submitted");
 }
 
