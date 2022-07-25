@@ -14,13 +14,21 @@ const provider = new ethers.providers.Web3Provider(window.ethereum);
 const token = new ethers.Contract(tokenAddress,tokenABI.abi,provider);
 const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
 
-async function sponsorProposal(data){
+async function sponsorProposal(id){
   const  signer = provider.getSigner();
   // get proposal id
   // check if member
   // check if allowance is there
-  await moloch.connect(signer).sponsorProposal(data);
+  await moloch.connect(signer).sponsorProposal(id);
   console.log("proposal sponsored");
+}
+async function processProposal(index){
+  const  signer = provider.getSigner();
+  // get proposal id
+  // check if member
+  // check if allowance is there
+  await moloch.connect(signer).processProposal(index);
+  console.log("proposal processed");
 }
  async function castVote(vote,data){
   const  signer = provider.getSigner();
@@ -43,6 +51,9 @@ const Proposal = () => {
   console.log(data);
   const proposalId = data[0];
   const proposalIndex = data[1];
+  const processed = data[2];
+  const details = data[3];
+  const proposer = data[4];
   return (
     <>
       <div className="contentProposal">
@@ -53,12 +64,12 @@ const Proposal = () => {
               Overview
             </div>
           </Link>
-          <div>Should we accept offer for the dao</div>
+          <div>{details}</div>
           <div className="proposalOverview">
             <div className="proposer">
               <span>Proposed By </span>
-              <Tooltip content={"ABCDE"}>
-                <Blockie seed={"ABCDEFG"} />
+              <Tooltip content={proposer}>
+                <Blockie seed={proposer} />
               </Tooltip>
             </div>
           </div>
@@ -76,6 +87,26 @@ const Proposal = () => {
               }
             }}
             text="Sponsor proposal"
+          />
+          <Button
+            onClick={(e)=> {
+              try{
+                //console.log(data);
+                if (processed === true){
+                  // log already processed
+
+                } else {
+                  // process proposal
+                  processProposal(proposalIndex);
+
+                }
+
+              }catch(e){
+                console.log(e);
+
+              }
+            }}
+            text = "process proposal"
           />
           <Form
             style={{

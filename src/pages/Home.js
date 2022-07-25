@@ -15,6 +15,8 @@ query MyQuery {
 	id
 	proposals {
   	proposalId
+    processed
+    proposer
   	sponsored
     details
     proposalIndex
@@ -77,10 +79,12 @@ async function fetchData(){
   const table = response.data.moloch.proposals.map((e) => [
       e.proposalId,
       e.details,
-      <Link to="/proposal" state={[e.proposalId,e.proposalIndex]}>
       <Tag color="blue" text={e.sponsored ? "yes":"no"} />,
+      <Link to="/proposal" state={[e.proposalId,e.proposalIndex, e.processed,e.details,e.proposer]}>
+      <Tag color="blue" text={e.processed ? "yes":"no"} />,
       </Link>,
-    ]);
+  ])
+    
   setDatas(table)
     
 }
@@ -94,12 +98,13 @@ async function fetchData(){
               Recent Proposals
               <div style={{marginTop: "30px"}}>
                 <Table
-                columnsConfig="40% 40% 40%"
+                columnsConfig="25% 25% 25% 25%"
                 data={datas}
                 header={[
                   <span>ID</span>,
                   <span>DETAILS</span>,
                   <span>SPONSORED</span>,
+                  <span>PROCESSED</span>,
                 ]}
                 pageSize={5}
                 />
