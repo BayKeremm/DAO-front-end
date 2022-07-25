@@ -3,6 +3,7 @@ import "./pages.css";
 import { TabList, Tab, Widget, Tag, Table, Form, Button } from "web3uikit";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
+import { useForm } from 'react-hook-form';
 import molochABI from "../abis/Moloch.json"
 import tokenABI from "../abis/Token.json"
 import {createClient} from 'urql'
@@ -41,7 +42,7 @@ const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
 //const molochAddress = "0x3155755b79aa083bd953911c92705b7aa82a18f9";
 //const tokenAddress = "0x3347b4d90ebe72befb30444c9966b2b990ae9fcb";
 
-async function createProposal(details){
+async function createProposal(details,sharesRequested,tributeOffered){
   const  signer = provider.getSigner();
   // create proposal
   //address applicant,
@@ -53,7 +54,7 @@ async function createProposal(details){
   //address paymentToken,
   //string memory details
   console.log(signer.getAddress());
-  const res  = await moloch.connect(signer).submitProposal(signer.getAddress(),0,0,0,token.address,0,token.address,details)
+  const res  = await moloch.connect(signer).submitProposal(signer.getAddress(),sharesRequested,0,tributeOffered,token.address,0,token.address,details)
   console.log(res);
   console.log("proposal submitted");
 }
@@ -88,6 +89,9 @@ async function fetchData(){
   setDatas(table)
     
 }
+const { register, handleSubmit, formState: { errors } } = useForm();
+  const onSubmit = data => {console.log(data); createProposal(data.details,data.sharesRequested,data.tributeOffered);}
+  console.log(errors);
 
   return (
     <>
@@ -122,37 +126,17 @@ async function fetchData(){
                 }}
                 text="Increase Allowance by 5000"
               />
+                <h3 style={{ color: 'black' }}>New Proposal</h3>
+                <div>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                  <input type="number" placeholder="sharesRequested" {...register("sharesRequested", {})} />
+                  <input type="number" placeholder="tributeOffered" {...register("tributeOffered", {})} />
+                  <input type="text" placeholder="details" {...register("details", {})} />
 
-              <Form
-                  buttonConfig={{
-                    isLoading: false,
-                    loadingText: "Submitting Proposal",
-                    text: "Submit",
-                    theme: "secondary",
-                  }}
-                  data={[
-                    {
-                      inputWidth: "100%",
-                      name: "New Proposal",
-                      type: "textarea",
-                      validation: {
-                        required: true,
-                      },
-                      value: "",
-                    },
-                  ]}
-                  onSubmit={(e) => {
-                    try{
-                      createProposal(e.data[0].inputResult);
-                    } catch(e){
-                      console.log(e);
-                    }
-                    
-                  }}
-                  title="Create a New Proposal"
-                />
+                  <input type="submit" />
+                </form>
 
-
+                </div>
             </div>
           </Tab>
           <Tab tabKey={2} tabName="Forum"></Tab>
