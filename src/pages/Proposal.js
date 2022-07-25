@@ -6,42 +6,43 @@ import { ethers } from "ethers";
 import molochABI from "../abis/Moloch.json"
 import tokenABI from "../abis/Token.json"
 
-
 // addresses on aws
 const molochAddress = "0x3155755b79aa083bd953911c92705b7aa82a18f9";
 const tokenAddress = "0x3347b4d90ebe72befb30444c9966b2b990ae9fcb";
 
+const provider = new ethers.providers.Web3Provider(window.ethereum);
+const token = new ethers.Contract(tokenAddress,tokenABI.abi,provider);
+const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
+
 async function sponsorProposal(data){
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
   const  signer = provider.getSigner();
-  const moloch = new ethers.Contract(molochAddress,molochABI.abi,signer);
-  const address = await signer.getAddress();
   // get proposal id
   // check if member
   // check if allowance is there
-  await moloch.sponsorProposal(data);
+  await moloch.connect(signer).sponsorProposal(data);
   console.log("proposal sponsored");
 }
  async function castVote(vote,data){
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
   const  signer = provider.getSigner();
-  const moloch = new ethers.Contract(molochAddress,molochABI.abi,signer);
-  const address = await signer.getAddress();
 
   // check if it is sponsored this can be done when fetching the data
 
   if(vote===true){
-    await moloch.submitVote(data,1) // proposalIndex, uintVote
-
+    await moloch.connect(signer).submitVote(data,1) // proposalIndex, uintVote
   }else{
-    await moloch.submitVote(data,0) // proposalIndex, uintVote
+    await moloch.connect(signer).submitVote(data,0) // proposalIndex, uintVote
   }
   console.log("proposal voted");
  } 
 
 const Proposal = () => {
+
+
   const location = useLocation();
   const data = location.state;
+  console.log(data);
+  const proposalId = data[0];
+  const proposalIndex = data[1];
   return (
     <>
       <div className="contentProposal">
@@ -54,7 +55,6 @@ const Proposal = () => {
           </Link>
           <div>Should we accept offer for the dao</div>
           <div className="proposalOverview">
-            <Tag color={"red"} text={"Rejected"} />
             <div className="proposer">
               <span>Proposed By </span>
               <Tooltip content={"ABCDE"}>
@@ -68,7 +68,7 @@ const Proposal = () => {
             onClick={(e)=> {
               try{
                 //console.log(data);
-                sponsorProposal(data);
+                sponsorProposal(proposalId);
 
               }catch(e){
                 console.log(e);
@@ -102,9 +102,9 @@ const Proposal = () => {
             ]}
             onSubmit={(e) => {
               if (e.data[0].inputResult[0] === "For") {
-                castVote(true,data);
+                castVote(true,proposalIndex);
               } else {
-                castVote(false,data);
+                castVote(false,proposalIndex);
               }
               //setSub(true);
             }}

@@ -5,8 +5,8 @@ import { Link } from "react-router-dom";
 import { ethers } from "ethers";
 import molochABI from "../abis/Moloch.json"
 import tokenABI from "../abis/Token.json"
-
 import {createClient} from 'urql'
+
 
 const APIURL = "http://f587-54-87-32-29.ngrok.io/subgraphs/name/daodesigner/moloch-subgraph"
 const query = `
@@ -17,6 +17,7 @@ query MyQuery {
   	proposalId
   	sponsored
     details
+    proposalIndex
 	}
   }
 }
@@ -25,18 +26,21 @@ const client = createClient({
   url:APIURL
 })
 
-// on local
-const molochAddress = "0xe15F67230A990c4F1eAac4022783a4ECE32b696D";
-const tokenAddress = "0x6C270398f2030DcB5a767acC9F0564f238419eB8";
+const provider = new ethers.providers.Web3Provider(window.ethereum);
+const molochAddress = "0x3155755b79aa083bd953911c92705b7aa82a18f9";
+const tokenAddress = "0x3347b4d90ebe72befb30444c9966b2b990ae9fcb";
+const token = new ethers.Contract(tokenAddress,tokenABI.abi,provider);
+const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
+
+
 // addresses on aws
+//const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+//const molochAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 //const molochAddress = "0x3155755b79aa083bd953911c92705b7aa82a18f9";
 //const tokenAddress = "0x3347b4d90ebe72befb30444c9966b2b990ae9fcb";
 
 async function createProposal(details){
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
   const  signer = provider.getSigner();
-  const moloch = new ethers.Contract(molochAddress,molochABI.abi,signer);
-  const address = await signer.getAddress();
   // create proposal
   //address applicant,
   //uint256 sharesRequested,
@@ -46,59 +50,21 @@ async function createProposal(details){
   //uint256 paymentRequested,
   //address paymentToken,
   //string memory details
-  await moloch.connect(signer).submitProposal(address,0,0,1,tokenAddress,0,tokenAddress,details)
+  console.log(signer.getAddress());
+  const res  = await moloch.connect(signer).submitProposal(signer.getAddress(),0,0,0,token.address,0,token.address,details)
+  console.log(res);
   console.log("proposal submitted");
 }
 
 async function increaseAllowance(){
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const  signer = await provider.getSigner();
-  const token = new ethers.Contract(tokenAddress,tokenABI.abi,signer);
+  const  signer = provider.getSigner();
 
-  const res = await token.increaseAllowance(molochAddress,5000);
-  //console.log(res);
+  const res = await token.connect(signer).increaseAllowance(moloch.address,5000);
+  console.log(res);
   console.log("increased allowance")
 }
 
 const Home = () => {
-  const [proposals, setProposals] = useState([
-    [
-      0,
-      <div>Should we start a Moralis hamburger chain?</div>,
-      <Link to="/proposal" state={0}>
-      <Tag color="green" text="Passed" />,
-      </Link>,
-    ],
-    [
-      1,
-      "Should we accept Elon Musks $44billion offer for our DAO?",
-      <Link to="/proposal" state={1}>
-        <Tag color="red" text="Rejected" />
-      </Link>,
-    ],
-    [
-      2,
-      "Do you want a Web3 Slack tutorial?",
-      <Link to="/proposal" state={2}>
-      <Tag color="blue" text="Ongoing" />,
-      </Link>,
-    ],
-    [
-      3,
-      "Are you interested in Xbox/Console web3 tutorials?",
-      <Link to="/proposal" state={3}>
-      <Tag color="blue" text="Ongoing" />,
-      </Link>,
-    ],
-    [
-      4,
-      "Would you attend a Moralis Builder get together in Miami?",
-      <Link to="/proposal" state={4}>
-      <Tag color="blue" text="Ongoing" />,
-      </Link>,
-    ],
-]);
-
 const [datas, setDatas] = useState([])
 useEffect(()=>{
   fetchData()
@@ -111,7 +77,7 @@ async function fetchData(){
   const table = response.data.moloch.proposals.map((e) => [
       e.proposalId,
       e.details,
-      <Link to="/proposal" state={e.proposalId}>
+      <Link to="/proposal" state={[e.proposalId,e.proposalIndex]}>
       <Tag color="blue" text={e.sponsored ? "yes":"no"} />,
       </Link>,
     ]);
