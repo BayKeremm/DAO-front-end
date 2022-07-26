@@ -10,11 +10,11 @@ import {createClient} from 'urql'
 
 
 const APIURL = "http://f587-54-87-32-29.ngrok.io/subgraphs/name/daodesigner/moloch-subgraph"
-const query = `
+const proposalsQuery = `
 query MyQuery {
   moloch(id: "0x3155755b79aa083bd953911c92705b7aa82a18f9") {
 	id
-	proposals {
+	proposals(orderBy: timestamp, orderDirection: desc) {
   	proposalId
     processed
     proposer
@@ -22,6 +22,18 @@ query MyQuery {
     details
     proposalIndex
 	}
+  }
+}
+`
+const membersQuery = `
+query MyQuery {
+  moloch(id: "0x3155755b79aa083bd953911c92705b7aa82a18f9") {
+    members {
+      id
+      loot
+      shares
+      memberAddress
+    }
   }
 }
 `
@@ -44,16 +56,26 @@ const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
 
 async function createProposal(details,sharesRequested,tributeOffered){
   const  signer = provider.getSigner();
-  // create proposal
-  //address applicant,
-  //uint256 sharesRequested,
-  //uint256 lootRequested,
-  //uint256 tributeOffered,
-  //address tributeToken,
-  //uint256 paymentRequested,
-  //address paymentToken,
-  //string memory details
-  console.log(signer.getAddress());
+
+  if(tributeOffered > 0){
+      // check if the applicant has balance 
+      const balance = await token.connect(signer).balanceOf(signer.getAddress());
+      if(balance._hex === "0x00"){
+        console.log("balance is",await token.connect(signer).balanceOf(signer.getAddress()));
+        console.log("You cannot offer tribute cus u dont have it")
+      }
+
+      // check allowance 
+      const allowance =   await token.connect(signer).allowance(signer.getAddress(),molochAddress);
+      if(allowance._hex === "0x00"){
+        console.log("allowance to the moloch",await token.connect(signer).allowance(signer.getAddress(),molochAddress));
+        console.log("please increase allowance to the moloch")
+      }
+      console.log("proposal reverted");
+      return
+
+  }
+
   const res  = await moloch.connect(signer).submitProposal(signer.getAddress(),sharesRequested,0,tributeOffered,token.address,0,token.address,details)
   console.log(res);
   console.log("proposal submitted");
@@ -68,16 +90,17 @@ async function increaseAllowance(){
 }
 
 const Home = () => {
-const [datas, setDatas] = useState([])
+const [proposals, setProposals] = useState([])
+const [members, setMembers] = useState([])
 useEffect(()=>{
-  fetchData()
+  fetchProposals()
+  fetchMembers()
 },[]);
 
-async function fetchData(){
-  const response = await client.query(query).toPromise()
+async function fetchProposals(){
+  const response = await client.query(proposalsQuery).toPromise()
   console.log('response',response.data.moloch.proposals)
-  //setDatas(response.data.moloch.proposals)
-  const table = response.data.moloch.proposals.map((e) => [
+  const tableProposals = response.data.moloch.proposals.map((e) => [
       e.proposalId,
       e.details,
       <Tag color="blue" text={e.sponsored ? "yes":"no"} />,
@@ -86,7 +109,19 @@ async function fetchData(){
       </Link>,
   ])
     
-  setDatas(table)
+  setProposals(tableProposals)
+    
+}
+async function fetchMembers(){
+  const response = await client.query(membersQuery).toPromise()
+  console.log('response',response.data.moloch.members)
+  const tableMembers = response.data.moloch.members.map((e) => [
+      e.memberAddress,
+      e.shares,
+      e.loot,
+  ])
+    
+  setMembers(tableMembers)
     
 }
 const { register, handleSubmit, formState: { errors } } = useForm();
@@ -97,13 +132,13 @@ const { register, handleSubmit, formState: { errors } } = useForm();
     <>
       <div className="content">
         <TabList defaultActiveKey={1} tabStyle="bulbUnion">
-          <Tab tabKey={1} tabName="DAO">
+          <Tab tabKey={1} tabName="Proposals">
             <div className = "tabContent"> 
               Recent Proposals
               <div style={{marginTop: "30px"}}>
                 <Table
                 columnsConfig="25% 25% 25% 25%"
-                data={datas}
+                data={proposals}
                 header={[
                   <span>ID</span>,
                   <span>DETAILS</span>,
@@ -126,12 +161,12 @@ const { register, handleSubmit, formState: { errors } } = useForm();
                 }}
                 text="Increase Allowance by 5000"
               />
-                <h3 style={{ color: 'black' }}>New Proposal</h3>
+                <h3 style={{ color: 'black' }}>proposal to become a member</h3>
                 <div>
                 <form onSubmit={handleSubmit(onSubmit)}>
                   <input type="number" placeholder="sharesRequested" {...register("sharesRequested", {})} />
                   <input type="number" placeholder="tributeOffered" {...register("tributeOffered", {})} />
-                  <input type="text" placeholder="details" {...register("details", {})} />
+                  <input type="text" placeholder="application details" {...register("details", {})} />
 
                   <input type="submit" />
                 </form>
@@ -139,7 +174,23 @@ const { register, handleSubmit, formState: { errors } } = useForm();
                 </div>
             </div>
           </Tab>
-          <Tab tabKey={2} tabName="Forum"></Tab>
+          <Tab tabKey={2} tabName="Members">
+            <div className = "tabContent"> 
+                Members
+              <div style={{marginTop: "30px"}}>
+                <Table
+                columnsConfig="60% 20% 20%"
+                data={members}
+                header={[
+                  <span>address</span>,
+                  <span>shares</span>,
+                  <span>loot</span>,
+                ]}
+                pageSize={5}
+                />
+              </div>
+            </div>
+          </Tab>
           <Tab tabKey={3} tabName="Docs"></Tab>
         </TabList>
       </div>
@@ -148,3 +199,12 @@ const { register, handleSubmit, formState: { errors } } = useForm();
   );
 };
 export default Home;
+  // create proposal
+  //address applicant,
+  //uint256 sharesRequested,
+  //uint256 lootRequested,
+  //uint256 tributeOffered,
+  //address tributeToken,
+  //uint256 paymentRequested,
+  //address paymentToken,
+  //string memory details

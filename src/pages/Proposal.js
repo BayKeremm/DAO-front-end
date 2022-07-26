@@ -5,50 +5,102 @@ import { Link,useLocation } from "react-router-dom";
 import { ethers } from "ethers";
 import molochABI from "../abis/Moloch.json"
 import tokenABI from "../abis/Token.json"
+import {createClient} from 'urql'
+const PROPOSALDEPOSIT = 300;
+
+const APIURL = "http://f587-54-87-32-29.ngrok.io/subgraphs/name/daodesigner/moloch-subgraph"
+
+const membersQuery = `
+query MyQuery {
+  moloch(id: "0x3155755b79aa083bd953911c92705b7aa82a18f9") {
+    members {
+      memberAddress
+    }
+  }
+}
+`
+const client = createClient({
+  url:APIURL
+})
 
 // addresses on aws
 const molochAddress = "0x3155755b79aa083bd953911c92705b7aa82a18f9";
 const tokenAddress = "0x3347b4d90ebe72befb30444c9966b2b990ae9fcb";
 
 const provider = new ethers.providers.Web3Provider(window.ethereum);
+
 const token = new ethers.Contract(tokenAddress,tokenABI.abi,provider);
 const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
 
-async function sponsorProposal(id){
+async function sponsorProposal(id,members){
   const  signer = provider.getSigner();
-  // get proposal id
-  // check if member
-  // check if allowance is there
-  await moloch.connect(signer).sponsorProposal(id);
-  console.log("proposal sponsored");
-}
+  //check if member
+  const address = await signer.getAddress();
+  // check balance
+  const balance = await token.connect(signer).balanceOf(address);
+  if(balance._hex < PROPOSALDEPOSIT){
+    console.log("balance is",await token.connect(signer).balanceOf(address));
+    console.log("Balance less than proposal deposit")
+    return
+  }
+
+  // check allowance 
+  const allowance =   await token.connect(signer).allowance(signer.getAddress(),molochAddress);
+  if(allowance._hex < PROPOSALDEPOSIT){
+    console.log("allowance to the moloch",await token.connect(signer).allowance(signer.getAddress(),molochAddress));
+    console.log("allowance less than proposal deposit")
+    return
+  }
+  try{
+    await moloch.connect(signer).sponsorProposal(id);
+    console.log("proposal sponsored");
+  }catch(err) {
+    console.log(err);
+  }    
+}  
+
 async function processProposal(index){
   const  signer = provider.getSigner();
-  // get proposal id
-  // check if member
-  // check if allowance is there
-  await moloch.connect(signer).processProposal(index);
-  console.log("proposal processed");
+  try{
+    await moloch.connect(signer).processProposal(index);
+    console.log("proposal processed");
+  }catch(err) {
+    console.log(err);
+  }    
 }
+
  async function castVote(vote,data){
   const  signer = provider.getSigner();
-
-  // check if it is sponsored this can be done when fetching the data
-
-  if(vote===true){
-    await moloch.connect(signer).submitVote(data,1) // proposalIndex, uintVote
-  }else{
-    await moloch.connect(signer).submitVote(data,0) // proposalIndex, uintVote
-  }
-  console.log("proposal voted");
+  //check if member
+    try{
+      console.log(data);
+      await moloch.connect(signer).submitVote(data,vote) // proposalIndex, uintVote
+    }catch(err) {
+      console.log(err);
+      console.log("vote reverted");
+      return
+    }    
+    console.log("proposal voted");
+    return
  } 
 
 const Proposal = () => {
+const [members, setMembers] = useState([])
+useEffect(()=>{
+  fetchMembers()
+},[]);
+
+async function fetchMembers(){
+  const response = await client.query(membersQuery).toPromise()
+  console.log('response',response.data.moloch.members)
+  setMembers(response.data.moloch.members);
+    
+}
+
 
 
   const location = useLocation();
   const data = location.state;
-  console.log(data);
   const proposalId = data[0];
   const proposalIndex = data[1];
   const processed = data[2];
@@ -79,7 +131,7 @@ const Proposal = () => {
             onClick={(e)=> {
               try{
                 //console.log(data);
-                sponsorProposal(proposalId);
+                sponsorProposal(proposalId,members);
 
               }catch(e){
                 console.log(e);
@@ -133,9 +185,9 @@ const Proposal = () => {
             ]}
             onSubmit={(e) => {
               if (e.data[0].inputResult[0] === "For") {
-                castVote(true,proposalIndex);
+                castVote(1,proposalIndex);
               } else {
-                castVote(false,proposalIndex);
+                castVote(0,proposalIndex);
               }
               //setSub(true);
             }}
