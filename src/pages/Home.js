@@ -21,6 +21,7 @@ query MyQuery {
   	sponsored
     details
     proposalIndex
+    didPass
 	}
   }
 }
@@ -63,6 +64,8 @@ async function createProposal(details,sharesRequested,tributeOffered){
       if(balance._hex === "0x00"){
         console.log("balance is",await token.connect(signer).balanceOf(signer.getAddress()));
         console.log("You cannot offer tribute cus u dont have it")
+        console.log("proposal reverted");
+        return
       }
 
       // check allowance 
@@ -70,15 +73,16 @@ async function createProposal(details,sharesRequested,tributeOffered){
       if(allowance._hex === "0x00"){
         console.log("allowance to the moloch",await token.connect(signer).allowance(signer.getAddress(),molochAddress));
         console.log("please increase allowance to the moloch")
+        console.log("proposal reverted");
+        return
       }
-      console.log("proposal reverted");
-      return
 
   }
 
   const res  = await moloch.connect(signer).submitProposal(signer.getAddress(),sharesRequested,0,tributeOffered,token.address,0,token.address,details)
   console.log(res);
   console.log("proposal submitted");
+
 }
 
 async function increaseAllowance(){
@@ -101,12 +105,13 @@ async function fetchProposals(){
   const response = await client.query(proposalsQuery).toPromise()
   console.log('response',response.data.moloch.proposals)
   const tableProposals = response.data.moloch.proposals.map((e) => [
-      e.proposalId,
-      e.details,
-      <Tag color="blue" text={e.sponsored ? "yes":"no"} />,
-      <Link to="/proposal" state={[e.proposalId,e.proposalIndex, e.processed,e.details,e.proposer]}>
-      <Tag color="blue" text={e.processed ? "yes":"no"} />,
+      <Link to={"/proposal/" + e.proposalId} state={[e.proposalId,e.proposalIndex, e.processed,e.details,e.proposer,e.sponsored]}>
+      <Button text={e.proposalId} />,
       </Link>,
+      e.details,
+      <Tag color={e.sponsored ? "green" : "gray"} text={e.sponsored ? "yes":"no"} />,
+      <Tag color={e.processed?"green":"gray"} text={e.processed ? "yes":"no"} />,
+      <Tag color={e.didPass ? "green":"red"} text={e.didPass ? "yes":"no"} />,
   ])
     
   setProposals(tableProposals)
@@ -137,15 +142,16 @@ const { register, handleSubmit, formState: { errors } } = useForm();
               Recent Proposals
               <div style={{marginTop: "30px"}}>
                 <Table
-                columnsConfig="25% 25% 25% 25%"
+                columnsConfig="20% 20% 20% 20% 20%"
                 data={proposals}
                 header={[
                   <span>ID</span>,
                   <span>DETAILS</span>,
                   <span>SPONSORED</span>,
                   <span>PROCESSED</span>,
+                  <span>PASSED</span>,
                 ]}
-                pageSize={5}
+                pageSize={8}
                 />
               </div>
 
@@ -191,7 +197,7 @@ const { register, handleSubmit, formState: { errors } } = useForm();
               </div>
             </div>
           </Tab>
-          <Tab tabKey={3} tabName="Docs"></Tab>
+          <Tab tabKey={3} tabName="Overview"></Tab>
         </TabList>
       </div>
       <div className="voting"></div>

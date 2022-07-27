@@ -1,0 +1,35 @@
+Period 18/07/2022 - 27/07/2022
+
+Front-end code is taken from: https://github.com/MoralisWeb3/youtube-tutorials
+
+With this front-end you are able to:
+    - Create a membership proposal
+    - Sponsor a proposal
+    - Vote on a proposal
+    - Process a proposal
+    - See the members of the DAO
+    - See the recent proposals
+
+Problems I had: 
+    
+    1. Submitting proposal with different accounts
+        - This was due to other accounts not having the newly created ERC20 token. 
+            When token is deployed, it is minted on the account that deployed it. 
+    
+    2. Not being able to vote and process a proposal
+        - This was due to having too long period duration. 
+            I decreased it and deployed the contracts again and 
+            it solved the waiting problem 
+    
+    3. Not being able to vote with a member of the DAO
+        - This is due to not having shares, which means in the application
+            the member did not request shares. No shares no voting rights
+    
+    4. To be able to process a proposal, every proposal preeceding it must be processed,
+        otherwise you get an error.
+    
+    5. Smart contract calls that have a sort of transfer needs to have the allowance from the account to 
+        the DAO to work. Otherwise you get an error even though you have bsufficient balance.
+    
+    6. You need to get the signer from the contract and before calling any method of the contract you have to connect 
+        the signer to it. This makes sure msg.sender in solidity code is the one you select in metamask.

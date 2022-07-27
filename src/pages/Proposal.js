@@ -32,9 +32,8 @@ const provider = new ethers.providers.Web3Provider(window.ethereum);
 const token = new ethers.Contract(tokenAddress,tokenABI.abi,provider);
 const moloch = new ethers.Contract(molochAddress,molochABI.abi,provider);
 
-async function sponsorProposal(id,members){
+async function sponsorProposal(id){
   const  signer = provider.getSigner();
-  //check if member
   const address = await signer.getAddress();
   // check balance
   const balance = await token.connect(signer).balanceOf(address);
@@ -106,6 +105,7 @@ async function fetchMembers(){
   const processed = data[2];
   const details = data[3];
   const proposer = data[4];
+  const sponsored = data[5];
   return (
     <>
       <div className="contentProposal">
@@ -129,13 +129,17 @@ async function fetchMembers(){
 
           <Button
             onClick={(e)=> {
-              try{
-                //console.log(data);
-                sponsorProposal(proposalId,members);
+              if(sponsored === true){
+                console.log("This proposal is already sponsored")
+              }else{
+                try{
+                  //console.log(data);
+                  sponsorProposal(proposalId);
 
-              }catch(e){
-                console.log(e);
+                }catch(e){
+                  console.log(e);
 
+                }
               }
             }}
             text="Sponsor proposal"
@@ -146,11 +150,11 @@ async function fetchMembers(){
                 //console.log(data);
                 if (processed === true){
                   // log already processed
+                  console.log("This proposal is already processed")
 
                 } else {
                   // process proposal
                   processProposal(proposalIndex);
-
                 }
 
               }catch(e){
@@ -184,12 +188,15 @@ async function fetchMembers(){
               },
             ]}
             onSubmit={(e) => {
-              if (e.data[0].inputResult[0] === "For") {
-                castVote(1,proposalIndex);
-              } else {
-                castVote(0,proposalIndex);
+              if(processed === true){
+                console.log("This proposal is processed you cannot vote")
+              }else{
+                if (e.data[0].inputResult[0] === "For") {
+                  castVote(1,proposalIndex);
+                } else {
+                  castVote(0,proposalIndex);
+                }
               }
-              //setSub(true);
             }}
             title="Cast Vote"
           />
